@@ -37,5 +37,5 @@ compile_commands.json
 build/
 Debug/
 bin/
-!bin/conf/
+!bin/conf/*
 lib/

@@ -1,7 +1,7 @@
 # COOL
 
 ## Log
-
+```
 Logger:`log(level, event)`[循环遍历LogAppender,调用log(logger, level, event)]
   -> 1. StdoutLogAppender:`m_formatter->format(logger, level, event)`
     -> 1.1 LogFormatter: `init`，也就是生成`m_items`
@@ -9,6 +9,7 @@ Logger:`log(level, event)`[循环遍历LogAppender,调用log(logger, level, even
       -> 1.1.2 能识别%xxx{%xxx}, 也就是分为str, format, type解析，比如能给date用
     -> 1.2 LogFormatter:`i->format(ss, logger, level, event)`; ->XXXFormatItem: `os << xxx`
   -> 2. FileLogAppender:`m_filestream << m_formatter->format(logger, level, event);`
+```
 
 ```
 Logger(日志器)
@@ -18,8 +19,21 @@ Logger(日志器)
 Appender(日志输出地)
 ```
 
+
+
 ## 配置系统
 
 Config --> Yaml
+
+yaml-cpp: mkdir build && cd build && cmake .. && sudo make install
+
+```cpp
+YAML::Node node = YAML::LoadFile(filename);
+node.IsMap()
+node.IsSequence()
+node.IsNull()
+node.IsScalar()
+```
+
 
 
