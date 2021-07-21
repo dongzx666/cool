@@ -30,3 +30,12 @@
 *.exe
 *.out
 *.app
+
+# 隐藏文件和中间文件
+.cache/
+compile_commands.json
+build/
+Debug/
+bin/
+!bin/conf/
+lib/
