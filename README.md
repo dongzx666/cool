@@ -49,10 +49,13 @@ LexicalCast;
 // Config::Lookup(key), same key, different value, throw error
 ```
 
+自定义类型，需要实现cool::LexicalCast, 片特化。然后就可以支持Config解析自定义类型，自定义类型可以与常规STL容器一起使用1
+
 ## 协程库封装
 ## socket函数库
 ## http协议开发
 ## 分布协议
 ## 推荐系统
+
 
 
