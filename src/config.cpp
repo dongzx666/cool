@@ -4,10 +4,13 @@
 #include <cctype>
 #include <string>
 #include <utility>
-#include <yaml-cpp/node/node.h>
 
 namespace cool {
 Config::configVarMap Config::s_datas;
+ConfigVarBase::ptr Config::lookupBase(const std::string &name) {
+  auto it = s_datas.find(name);
+  return it == s_datas.end() ? nullptr : it->second;
+}
 
 static void listAllMember(const std::string& prefix,
     const YAML::Node& node,
@@ -19,11 +22,12 @@ static void listAllMember(const std::string& prefix,
   output.push_back(std::make_pair(prefix, node));
   if (node.IsMap()) {
     for (auto it = node.begin(); it != node.end(); ++it) {
-      listAllMember(prefix.empty() ? it->first : (prefix + "." + it->first), it->second, output);
+      listAllMember(prefix.empty() ? it->first.Scalar()
+          : (prefix + "." + it->first.Scalar()), it->second, output);
     }
   }
 }
-void loadFromYaml(const YAML::Node& root){
+void Config::loadFromYaml(const YAML::Node& root){
   std::list<std::pair<std::string, const YAML::Node>> all_nodes;
   listAllMember("", root, all_nodes);
 
@@ -33,7 +37,17 @@ void loadFromYaml(const YAML::Node& root){
       continue;
     }
     std::transform(key.begin(), key.end(), key.begin(), ::tolower);
-    ConfigVarBase::ptr var = ;
+    ConfigVarBase::ptr var = Config::lookupBase(key);
+
+    if (var) {
+      if (i.second.IsScalar()) {
+        var->from_string(i.second.Scalar());
+      } else {
+        std::stringstream ss;
+        ss << i.second;
+        var->from_string(ss.str());
+      }
+    }
   }
 }
 }

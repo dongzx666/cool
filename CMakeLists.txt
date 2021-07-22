@@ -7,8 +7,9 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -rdynamic -fPIC")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unused-function -Wno-builtin-macro-redefined -Wno-deprecated -Wno-deprecated-declarations")
 
 include_directories(.)
-link_directories(/home/dongzx/opt/software/yaml-cpp/build)
 include_directories(/home/dongzx/opt/software/yaml-cpp/include/yaml-cpp)
+link_directories(/home/dongzx/opt/software/yaml-cpp/build)
+
 
 set(LIB_SRC
   src/log.cpp
@@ -20,12 +21,12 @@ add_library(src SHARED ${LIB_SRC})
 
 set(LIBS
   src
-  # yaml-cpp
+  yaml-cpp
 )
 # add_executable(test_log "tests/test_log.cpp" src "${LIBS}")
 add_executable(test_log tests/test_log.cpp)
 add_dependencies(test_log src)
-target_link_libraries(test_log src)
+target_link_libraries(test_log src yaml-cpp)
 
 add_executable(test_config tests/test_config.cpp)
 add_dependencies(test_config src)

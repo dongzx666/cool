@@ -35,5 +35,21 @@ node.IsNull()
 node.IsScalar()
 ```
 
+配置系统的原则是，约定优于配置。减少配置量，大量配置保持不动，少量通过约定调整。
 
+```cpp
+template<T, FromStr, ToStr>
+class ConfigVar;
+
+template<F, T>
+LexicalCast;
+
+// 容器片特化，目前支持vector
+```
+
+## 协程库封装
+## socket函数库
+## http协议开发
+## 分布协议
+## 推荐系统
 

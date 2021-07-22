@@ -31,9 +31,11 @@
 *.out
 *.app
 
-# 隐藏文件和中间文件
+# 隐藏文件夹和其他文件
 .cache/
 compile_commands.json
+
+# 中间文件夹
 build/
 Debug/
 lib/
@@ -41,3 +43,6 @@ lib/
 # bin
 test_log
 test_config
+
+# log
+log.txt
