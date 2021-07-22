@@ -20,3 +20,18 @@ system:
     - 10
     - 20
     - 30
+  int_list: [20, 40, 50]
+  int_set: [30, 20, 60, 20]
+  int_uset: [40, 60, 50, 20]
+  str_int_map:
+    k: 30
+    v: 20
+  str_int_umap:
+    k1: 130
+    k2: 110
+    k3: 120
+class:
+  person:
+    name: cool
+    age: 1
+    sex: 1

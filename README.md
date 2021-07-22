@@ -44,7 +44,9 @@ class ConfigVar;
 template<F, T>
 LexicalCast;
 
-// 容器片特化，目前支持vector
+// 容器片特化，目前支持vector, list, set, map, unordered_map, unordered_set
+// map/unordered_map: key = std::string
+// Config::Lookup(key), same key, different value, throw error
 ```
 
 ## 协程库封装
@@ -52,4 +54,5 @@ LexicalCast;
 ## http协议开发
 ## 分布协议
 ## 推荐系统
+
 
