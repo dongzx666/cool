@@ -49,13 +49,50 @@ LexicalCast;
 // Config::Lookup(key), same key, different value, throw error
 ```
 
-自定义类型，需要实现cool::LexicalCast, 片特化。然后就可以支持Config解析自定义类型，自定义类型可以与常规STL容器一起使用1
+自定义类型：
+
+需要实现cool::LexicalCast, 片特化。然后就可以支持Config解析自定义类型，自定义类型可以与常规STL容器一起使用1
+
+配置事件机制：
+
+当一个配置项发生修改的时候，可以反向通知对应的代码（即回调）
+
+日志与配置整合：
+```yaml
+logs:
+  name: root
+  level: debug, info, warn, error, fatal
+  formatter: '%d%T%p%T%t%T%m%n'
+  appender:
+    - type: StdoutLogAppender, FileLogAppender
+      level: debug...
+      file: /logs/xxx.log
+```
+
+```cpp
+cool::Logger g_logger = cool::LoggerMgr::instance()->logger(name);
+LOG_INFO(g_logger) << "xxxx log";
+```
+
+```cpp
+static Logger::ptr g_log = LOG_NAME("system");
+// 当logger的appenders为空时，使用root写logger
+```
+
+```cpp
+// 定义LogDefine LogAppenderDefine, 偏特化LexicalCast，实现日志配置解析
+```
+
+```cpp
+
+```
+
+
 
 ## 协程库封装
 ## socket函数库
 ## http协议开发
 ## 分布协议
 ## 推荐系统
-
 
 

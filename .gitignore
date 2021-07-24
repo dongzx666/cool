@@ -37,12 +37,8 @@ compile_commands.json
 
 # 中间文件夹
 build/
-Debug/
 lib/
-
-# bin
-test_log
-test_config
+bin/
 
 # log
-log.txt
+*.txt
