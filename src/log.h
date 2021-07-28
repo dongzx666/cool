@@ -2,6 +2,8 @@
 #define __COOL_LOG_H
 
 #include "singleton.h"
+#include "util.h"
+#include "thread.h"
 #include <cctype>
 #include <cstdarg>
 #include <cstdint>
@@ -11,7 +13,6 @@
 #include <ctime>
 #include <fstream>
 #include <functional>
-#include <ios>
 #include <iostream>
 #include <list>
 #include <map>
@@ -149,22 +150,25 @@ private:
 };
 // 日志输出
 class LogAppender {
+friend class Logger;
 public:
   using ptr = std::shared_ptr<LogAppender>;
+  using MutexType = SpinMutex;
   virtual ~LogAppender() {}
   virtual std::string to_yaml_string() = 0;
 
   virtual void log(std::shared_ptr<Logger> logger, LogLevel::Level level,
                    LogEvent::ptr event) = 0;
 
-  void formatter(LogFormatter::ptr val) { m_formatter = val; }
-  LogFormatter::ptr formatter() const { return m_formatter; }
+  void formatter(LogFormatter::ptr val);
+  LogFormatter::ptr formatter();
   // void level(LogLevel::Level level) { m_level = level; }
   // LogLevel::Level level() const { return m_level; }
 
 protected:
   // LogLevel::Level m_level = LogLevel::DEBUG;
   LogFormatter::ptr m_formatter;
+  MutexType m_mutex;
 };
 // 日志器
 class Logger : public std::enable_shared_from_this<Logger> {
@@ -172,6 +176,7 @@ class Logger : public std::enable_shared_from_this<Logger> {
 
 public:
   using ptr = std::shared_ptr<Logger>;
+  using MutexType = SpinMutex;
   Logger(const std::string &name = "root");
 
   void log(LogLevel::Level level, LogEvent::ptr event);
@@ -189,7 +194,7 @@ public:
   const std::string &name() const { return m_name; }
   void formatter(LogFormatter::ptr val);
   void formatter(const std::string &val);
-  LogFormatter::ptr formatter() const { return m_formatter; }
+  LogFormatter::ptr formatter();
 
   std::string to_yaml_string();
 
@@ -200,6 +205,7 @@ private:
   LogFormatter::ptr m_formatter;
   // TODO: Logger和LoggerManager都有m_root太冗余 <23-07-21, fengyu>
   Logger::ptr m_root;
+  MutexType m_mutex;
 };
 // 输出到命令行的输出器
 class StdoutLogAppender : public LogAppender {
@@ -227,6 +233,7 @@ private:
 
 class LoggerManager {
 public:
+  using MutexType = SpinMutex;
   LoggerManager();
   Logger::ptr logger(const std::string &name);
   void addLogger(std::string name, Logger::ptr logger);
@@ -235,6 +242,7 @@ public:
   std::string to_yaml_string();
 
 private:
+  MutexType m_mutex;
   std::map<std::string, Logger::ptr> m_loggers;
   Logger::ptr m_root;
 };

@@ -1,6 +1,6 @@
 # COOL
 
-## Log
+## 日志系统
 ```
 Logger:`log(level, event)`[循环遍历LogAppender,调用log(logger, level, event)]
   -> 1. StdoutLogAppender:`m_formatter->format(logger, level, event)`
@@ -83,10 +83,14 @@ static Logger::ptr g_log = LOG_NAME("system");
 // 定义LogDefine LogAppenderDefine, 偏特化LexicalCast，实现日志配置解析
 ```
 
-```cpp
+## 线程库
 
-```
+### Thread:
+Pthread: pthread_create pthread_join pthread_detach
 
+### Mutex:
+互斥量：mutex（Mutex, ReadMutex, WriteMutex, SpinMutex(最终采用这个在日志中加锁), CASMutex）
+信号量：semaphore
 
 
 ## 协程库封装
@@ -94,5 +98,3 @@ static Logger::ptr g_log = LOG_NAME("system");
 ## http协议开发
 ## 分布协议
 ## 推荐系统
-
-

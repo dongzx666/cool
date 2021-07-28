@@ -17,6 +17,7 @@ set(LIB_SRC
   src/log.cpp
   src/util.cpp
   src/config.cpp
+  src/thread.cpp
   )
 
 add_library(src SHARED ${LIB_SRC})
@@ -25,17 +26,24 @@ force_redefine_file_macro_for_sources(src)
 set(LIBS
   src
   yaml-cpp
+  pthread
 )
 # add_executable(test_log "tests/test_log.cpp" src "${LIBS}")
+
 add_executable(test_log tests/test_log.cpp)
 add_dependencies(test_log src)
-target_link_libraries(test_log src yaml-cpp)
+target_link_libraries(test_log ${LIBS})
 force_redefine_file_macro_for_sources(test_log)
 
 add_executable(test_config tests/test_config.cpp)
 add_dependencies(test_config src)
-target_link_libraries(test_config src yaml-cpp)
+target_link_libraries(test_config ${LIBS})
 force_redefine_file_macro_for_sources(test_config)
+
+add_executable(test_thread tests/test_thread.cpp)
+add_dependencies(test_thread src)
+target_link_libraries(test_thread ${LIBS})
+force_redefine_file_macro_for_sources(test_thread)
 
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)

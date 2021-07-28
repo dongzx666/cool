@@ -160,6 +160,7 @@ public:
     strftime(buf, sizeof(buf), m_format.c_str(), &tm);
     os << buf;
   }
+
 private:
   std::string m_format;
 };
@@ -202,6 +203,7 @@ public:
                       LogLevel::Level level, LogEvent::ptr event) override {
     os << m_string;
   }
+
 private:
   std::string m_string;
 };
@@ -320,17 +322,27 @@ void LogFormatter::init() {
   // std::cout << m_items.size() << std::endl;
 }
 // LogAppender
+void LogAppender::formatter(LogFormatter::ptr val) {
+  MutexType::Lock lock(m_mutex);
+  m_formatter = val;
+}
+LogFormatter::ptr LogAppender::formatter() {
+  MutexType::Lock lock(m_mutex);
+  return m_formatter;
+}
+
 FileLogAppender::FileLogAppender(const std::string &filename)
     : m_filename(filename) {
   m_filestream.open(m_filename, std::ios_base::app);
 }
 void FileLogAppender::log(Logger::ptr logger, LogLevel::Level level,
                           LogEvent::ptr event) {
-  // if (level >= m_level) {
-    m_filestream << m_formatter->format(logger, level, event);
-  // }
+  // TODO: 不禁让人想问真的会有人在写入过程中把文件删除么？ <27-07-21, fengyu>
+  MutexType::Lock lock(m_mutex);
+  m_filestream << m_formatter->format(logger, level, event);
 }
 bool FileLogAppender::reopen() {
+  MutexType::Lock lock(m_mutex);
   if (m_filestream) {
     m_filestream.close();
   }
@@ -338,6 +350,7 @@ bool FileLogAppender::reopen() {
   return !!m_filestream;
 }
 std::string FileLogAppender::to_yaml_string() {
+  MutexType::Lock lock(m_mutex);
   YAML::Node node;
   node["type"] = "FileLogAppender";
   node["file"] = m_filename;
@@ -352,10 +365,12 @@ std::string FileLogAppender::to_yaml_string() {
 void StdoutLogAppender::log(Logger::ptr logger, LogLevel::Level level,
                             LogEvent::ptr event) {
   // if (level >= m_level) {
-    std::cout << m_formatter->format(logger, level, event);
+  MutexType::Lock lock(m_mutex);
+  std::cout << m_formatter->format(logger, level, event);
   // }
 }
 std::string StdoutLogAppender::to_yaml_string() {
+  MutexType::Lock lock(m_mutex);
   YAML::Node node;
   node["type"] = "StdoutLogAppender";
   // node["level"] = LogLevel::to_string(m_level);
@@ -368,6 +383,7 @@ std::string StdoutLogAppender::to_yaml_string() {
 }
 // Logger
 std::string Logger::to_yaml_string() {
+  MutexType::Lock lock(m_mutex);
   YAML::Node node;
   node["name"] = m_name;
   node["level"] = LogLevel::to_string(m_level);
@@ -382,25 +398,42 @@ std::string Logger::to_yaml_string() {
   return ss.str();
 }
 void Logger::addAppender(LogAppender::ptr appender) {
+  MutexType::Lock lock(m_mutex);
   if (!appender->formatter()) {
+    // TODO: appender的formatter内部已经加锁，这里无需加了 <27-07-21, fengyu> //
+    // MutexType::Lock ll(appender->m_mutex);
     appender->formatter(m_formatter);
   }
   m_appenders.push_back(appender);
 }
+
 void Logger::delAppender(LogAppender::ptr appender) {
+  MutexType::Lock lock(m_mutex);
   for (auto it = m_appenders.begin(); it != m_appenders.end(); ++it) {
     if (*it == appender) {
       m_appenders.erase(it);
     }
   }
 }
-void Logger::clearAppenders() { m_appenders.clear(); }
+
+void Logger::clearAppenders() {
+  MutexType::Lock lock(m_mutex);
+  m_appenders.clear();
+}
+
+LogFormatter::ptr Logger::formatter() {
+  MutexType::Lock lock(m_mutex);
+  return m_formatter;
+}
+
 void Logger::formatter(LogFormatter::ptr val) {
+  MutexType::Lock lock(m_mutex);
   // for (auto& i : m_appenders) {
-    // TODO: 粗糙的写法，目的是为了修改logger的formatter时能让未配置此属性的appender与之同步 <24-07-21, fengyu> //
-    // if (i->formatter()->format() == m_formatter) {
-    //   i->formatter(val);
-    // }
+  // TODO: 粗糙的写法,如果formatter修改，需要与appender的formatter同步
+  // // if (i->formatter()->format() == m_formatter) {
+  //   MutexType::Lock ll(i->m_mutex);
+  //   i->formatter(val);
+  // }
   // }
   m_formatter = val;
 }
@@ -411,13 +444,14 @@ void Logger::formatter(const std::string &val) {
               << " invalid formatter" << std::endl;
     return;
   }
-  m_formatter.reset(new cool::LogFormatter(val));
+  formatter(new_val);
 }
 // void Logger::formatter(LogFormatter::ptr val) {
 // }
 void Logger::log(LogLevel::Level level, LogEvent::ptr event) {
   if (level >= m_level) {
     auto self = shared_from_this();
+    MutexType::Lock lock(m_mutex);
     if (!m_appenders.empty()) {
       for (auto &i : m_appenders) {
         i->log(self, level, event);
@@ -432,27 +466,7 @@ void Logger::info(LogEvent::ptr event) { log(LogLevel::INFO, event); }
 void Logger::warn(LogEvent::ptr event) { log(LogLevel::WARN, event); }
 void Logger::error(LogEvent::ptr event) { log(LogLevel::ERROR, event); }
 void Logger::fatal(LogEvent::ptr event) { log(LogLevel::FATAL, event); }
-// LoggerManager
-LoggerManager::LoggerManager() {
-  m_root.reset(new Logger);
-  m_root->addAppender(LogAppender::ptr(new StdoutLogAppender));
-  m_loggers[m_root->m_name] = m_root;
-  init();
-}
-void LoggerManager::addLogger(std::string name, Logger::ptr logger) {
-  m_loggers[name] = logger;
-}
-Logger::ptr LoggerManager::logger(const std::string &name) {
-  // TODO: 或许可以把map改成vector避免重复的string？ <20-07-21, fengyu> //
-  auto it = m_loggers.find(name);
-  if (it != m_loggers.end()) {
-    return it->second;
-  }
-  Logger::ptr logger(new Logger(name));
-  logger->m_root = m_root;
-  m_loggers[name] = logger;
-  return logger;
-}
+// LogAppenderDefine LogDefine LogIniter
 struct LogAppenderDefine {
   int type = 0; // 1 file, 2 stdout
   // LogLevel::Level level = LogLevel::UNKNOWN;
@@ -473,8 +487,7 @@ struct LogDefine {
   }
   bool operator<(const LogDefine &oth) const { return name < oth.name; }
 };
-template<>
-class LexicalCast<std::string, std::set<LogDefine>> {
+template <> class LexicalCast<std::string, std::set<LogDefine>> {
 public:
   std::set<LogDefine> operator()(const std::string &v) {
     YAML::Node node = YAML::Load(v);
@@ -529,8 +542,7 @@ public:
     return vec;
   }
 };
-template<>
-class LexicalCast<std::set<LogDefine>, std::string> {
+template <> class LexicalCast<std::set<LogDefine>, std::string> {
 public:
   std::string operator()(const std::set<LogDefine> &v) {
     YAML::Node node;
@@ -566,56 +578,80 @@ cool::ConfigVar<std::set<LogDefine>>::ptr g_log_defines =
     cool::Config::lookup("logs", std::set<LogDefine>(), "logs config");
 struct LogIniter {
   LogIniter() {
-    g_log_defines->addListener(
-        0xF1E231, [](const std::set<LogDefine> &old_value,
-                     const std::set<LogDefine> &new_value) {
-        // std::cout << g_log_defines->to_string() << std::endl;
-          LOG_INFO(LOG_ROOT()) << "on_logger_conf_changed";
-          for (auto &i : new_value) {
-            auto it = old_value.find(i);
-            cool::Logger::ptr logger;
-            if (it == old_value.end()) {
-              // add logger
-              // logger.reset(new cool::Logger(i.name));
-              logger = LOG_NAME(i.name);
-            } else {
-              if (!(i == *it)) {
-                // edit logger
-                logger = LOG_NAME(i.name);
-              }
-            }
-            logger->level(i.level);
-            logger->clearAppenders();
-            if (!i.formatter.empty()) {
-              logger->formatter(i.formatter);
-            }
-            for (auto &a : i.appenders) {
-              cool::LogAppender::ptr ap;
-              if (a.type == 1) {
-                ap.reset(new FileLogAppender(a.file));
-              } else if (a.type == 2) {
-                ap.reset(new StdoutLogAppender);
-              }
-              if (!a.formatter.empty()) {
-                ap->formatter(LogFormatter::ptr(new LogFormatter(a.formatter)));
-              }
-              // ap->level(a.level);
-              logger->addAppender(ap);
-            }
+    g_log_defines->addListener([](const std::set<LogDefine> &old_value,
+                                  const std::set<LogDefine> &new_value) {
+      // std::cout << g_log_defines->to_string() << std::endl;
+      LOG_INFO(LOG_ROOT()) << "on_logger_conf_changed";
+      for (auto &i : new_value) {
+        auto it = old_value.find(i);
+        cool::Logger::ptr logger;
+        if (it == old_value.end()) {
+          // add logger
+          // logger.reset(new cool::Logger(i.name));
+          logger = LOG_NAME(i.name);
+        } else {
+          if (!(i == *it)) {
+            // edit logger
+            logger = LOG_NAME(i.name);
           }
-          for (auto &i : old_value) {
-            auto it = new_value.find(i);
-            if (it == new_value.end()) {
-              // delete logger
-              auto logger = LOG_NAME(i.name);
-              logger->level(static_cast<LogLevel::Level>(100));
-              logger->clearAppenders();
-            }
+        }
+        logger->level(i.level);
+        logger->clearAppenders();
+        if (!i.formatter.empty()) {
+          logger->formatter(i.formatter);
+        }
+        for (auto &a : i.appenders) {
+          cool::LogAppender::ptr ap;
+          if (a.type == 1) {
+            ap.reset(new FileLogAppender(a.file));
+          } else if (a.type == 2) {
+            ap.reset(new StdoutLogAppender);
           }
-        });
+          if (!a.formatter.empty()) {
+            ap->formatter(LogFormatter::ptr(new LogFormatter(a.formatter)));
+          }
+          // ap->level(a.level);
+          logger->addAppender(ap);
+        }
+      }
+      for (auto &i : old_value) {
+        auto it = new_value.find(i);
+        if (it == new_value.end()) {
+          // delete logger
+          auto logger = LOG_NAME(i.name);
+          logger->level(static_cast<LogLevel::Level>(100));
+          logger->clearAppenders();
+        }
+      }
+    });
   }
 };
+static LogIniter __log_init;
+// LoggerManager
+LoggerManager::LoggerManager() {
+  m_root.reset(new Logger);
+  m_root->addAppender(LogAppender::ptr(new StdoutLogAppender));
+  m_loggers[m_root->m_name] = m_root;
+  init();
+}
+void LoggerManager::addLogger(std::string name, Logger::ptr logger) {
+  MutexType::Lock lock(m_mutex);
+  m_loggers[name] = logger;
+}
+Logger::ptr LoggerManager::logger(const std::string &name) {
+  MutexType::Lock lock(m_mutex);
+  // TODO: 或许可以把map改成vector避免重复的string？ <20-07-21, fengyu> //
+  auto it = m_loggers.find(name);
+  if (it != m_loggers.end()) {
+    return it->second;
+  }
+  Logger::ptr logger(new Logger(name));
+  logger->m_root = m_root;
+  m_loggers[name] = logger;
+  return logger;
+}
 std::string LoggerManager::to_yaml_string() {
+  MutexType::Lock lock(m_mutex);
   YAML::Node node;
   for (auto &i : m_loggers) {
     // std::cout << i.first << std::endl;
@@ -625,6 +661,5 @@ std::string LoggerManager::to_yaml_string() {
   ss << node;
   return ss.str();
 }
-static LogIniter __log_init;
 void LoggerManager::init() {}
 } // namespace cool

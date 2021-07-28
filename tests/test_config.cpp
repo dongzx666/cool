@@ -3,8 +3,6 @@
 #include <sstream>
 #include <string>
 #include <vector>
-#include <yaml-cpp/node/impl.h>
-#include <yaml-cpp/node/parse.h>
 #include <yaml.h>
 
 cool::ConfigVar<int>::ptr g_int_value_config =
@@ -45,23 +43,21 @@ cool::ConfigVar<std::unordered_map<std::string, int>>::ptr
 
 void print_yaml(const YAML::Node &node, int level) {
   if (node.IsScalar()) {
-    LOG_INFO(LOG_ROOT())
-        << std::string(level * 4, ' ') << node.Scalar() << " - " << node.Type();
+    LOG_INFO(LOG_ROOT()) << std::string(level * 4, ' ') << node.Scalar()
+                         << " - " << node.Type();
   } else if (node.IsNull()) {
     LOG_INFO(LOG_ROOT()) << std::string(level * 4, ' ') << "NULL - "
-                                   << node.Type() << " - " << level;
+                         << node.Type() << " - " << level;
   } else if (node.IsMap()) {
     for (auto it = node.begin(); it != node.end(); ++it) {
-      LOG_INFO(LOG_ROOT())
-          << std::string(level * 4, ' ') << it->first << " - "
-          << it->second.Type() << " - " << level;
+      LOG_INFO(LOG_ROOT()) << std::string(level * 4, ' ') << it->first << " - "
+                           << it->second.Type() << " - " << level;
       print_yaml(it->second, level + 1);
     }
   } else if (node.IsSequence()) {
     for (size_t i = 0; i < node.size(); ++i) {
-      LOG_INFO(LOG_ROOT())
-          << std::string(level * 4, ' ') << i << " - " << node[i].Type()
-          << " - " << level;
+      LOG_INFO(LOG_ROOT()) << std::string(level * 4, ' ') << i << " - "
+                           << node[i].Type() << " - " << level;
       print_yaml(node[i], level + 1);
     }
   }
@@ -74,26 +70,25 @@ void test_yaml() {
 
 void test_config() {
   LOG_INFO(LOG_ROOT()) << "before " << g_int_value_config->value();
-  LOG_INFO(LOG_ROOT())
-      << "before " << g_double_value_config->to_string();
+  LOG_INFO(LOG_ROOT()) << "before " << g_double_value_config->to_string();
 #define XX(g_var, name, prefix)                                                \
   {                                                                            \
     auto v = g_var->value();                                                   \
     for (auto &i : v) {                                                        \
-      LOG_INFO(LOG_ROOT()) << #prefix " " #name ": " << i;           \
+      LOG_INFO(LOG_ROOT()) << #prefix " " #name ": " << i;                     \
     }                                                                          \
-    LOG_INFO(LOG_ROOT()) << #prefix " " #name " yaml:\n"             \
-                                   << g_var->to_string();                      \
+    LOG_INFO(LOG_ROOT()) << #prefix " " #name " yaml:\n"                       \
+                         << g_var->to_string();                                \
   }
 #define XX_M(g_var, name, prefix)                                              \
   {                                                                            \
     auto v = g_var->value();                                                   \
     for (auto &i : v) {                                                        \
-      LOG_INFO(LOG_ROOT())                                           \
-          << #prefix " " #name ": {" << i.first << " : " << i.second << "}";   \
+      LOG_INFO(LOG_ROOT()) << #prefix " " #name ": {" << i.first << " : "      \
+                           << i.second << "}";                                 \
     }                                                                          \
-    LOG_INFO(LOG_ROOT()) << #prefix " " #name " yaml:\n"             \
-                                   << g_var->to_string();                      \
+    LOG_INFO(LOG_ROOT()) << #prefix " " #name " yaml:\n"                       \
+                         << g_var->to_string();                                \
   }
   XX(g_int_vector_value_config, int_vec, before);
   XX(g_int_list_value_config, int_list, before);
@@ -103,11 +98,10 @@ void test_config() {
   XX_M(g_str_int_umap_value_config, str_int_umap, before);
 
   YAML::Node root = YAML::LoadFile("../config/log.yml");
-  cool::Config::loadFromYaml(root);
+  cool::Config::load_from_yaml(root);
 
   LOG_INFO(LOG_ROOT()) << "after " << g_int_value_config->value();
-  LOG_INFO(LOG_ROOT())
-      << "after " << g_double_value_config->to_string();
+  LOG_INFO(LOG_ROOT()) << "after " << g_double_value_config->to_string();
   XX(g_int_vector_value_config, int_vec, after);
   XX(g_int_list_value_config, int_list, after);
   XX(g_int_set_value_config, int_set, after);
@@ -162,22 +156,18 @@ cool::ConfigVar<Person>::ptr g_person =
     cool::Config::lookup("class.person", Person(), "system person");
 
 void test_class() {
-  g_person->addListener(
-      10, [](const Person &old_value, const Person &new_value) {
-        LOG_INFO(LOG_ROOT())
-            << "[addListener]old_value=" << old_value.to_string()
-            << "new_value=" << new_value.to_string();
-      });
-  LOG_INFO(LOG_ROOT())
-      << "before" << g_person->value().to_string() << std::endl
-      << g_person->to_string();
+  g_person->addListener([](const Person &old_value, const Person &new_value) {
+    LOG_INFO(LOG_ROOT()) << "[addListener]old_value=" << old_value.to_string()
+                         << "new_value=" << new_value.to_string();
+  });
+  LOG_INFO(LOG_ROOT()) << "before" << g_person->value().to_string() << std::endl
+                       << g_person->to_string();
 
   YAML::Node root = YAML::LoadFile("../config/log.yml");
-  cool::Config::loadFromYaml(root);
+  cool::Config::load_from_yaml(root);
 
-  LOG_INFO(LOG_ROOT())
-      << "after" << g_person->value().to_string() << std::endl
-      << g_person->to_string();
+  LOG_INFO(LOG_ROOT()) << "after" << g_person->value().to_string() << std::endl
+                       << g_person->to_string();
 }
 
 void test_log() {
@@ -186,14 +176,20 @@ void test_log() {
   std::cout << cool::LoggerMgr::instance()->to_yaml_string() << std::endl;
   YAML::Node root = YAML::LoadFile("../config/log.yml");
   // std::cout << root << std::endl;
-  cool::Config::loadFromYaml(root);
+  cool::Config::load_from_yaml(root);
   std::cout << "===========================" << std::endl;
   std::cout << cool::LoggerMgr::instance()->to_yaml_string() << std::endl;
   LOG_INFO(sys_log) << "hello system" << std::endl;
   sys_log->formatter("%d - %m%n");
   LOG_INFO(sys_log) << "hello system" << std::endl;
 }
-
+void test_visit() {
+  cool::Config::Visit([](cool::ConfigVarBase::ptr var) {
+    LOG_INFO(LOG_ROOT()) << "name=" << var->name() << ",des=" << var->des()
+                       << ",typename=" << var->type()
+                       << ",value=" << var->to_string();
+  });
+}
 int main() {
   // LOG_INFO(LOG_ROOT()) << g_double_value_config->val();
   // LOG_INFO(LOG_ROOT()) << g_double_value_config->to_string();
@@ -204,6 +200,8 @@ int main() {
 
   // test_class();
 
-  test_log();
+  // test_log();
+
+  test_visit();
   return 0;
 }

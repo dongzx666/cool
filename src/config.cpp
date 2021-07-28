@@ -7,9 +7,10 @@
 
 namespace cool {
 // Config::configVarMap Config::s_datas;
-ConfigVarBase::ptr Config::lookupBase(const std::string &name) {
-  auto it = datas().find(name);
-  return it == datas().end() ? nullptr : it->second;
+ConfigVarBase::ptr Config::lookup_base(const std::string &name) {
+  RWMutexType::ReadLock lock(GetMutex());
+  auto it = GetDatas().find(name);
+  return it == GetDatas().end() ? nullptr : it->second;
 }
 
 static void
@@ -17,8 +18,7 @@ listAllMember(const std::string &prefix, const YAML::Node &node,
               std::list<std::pair<std::string, const YAML::Node>> &output) {
   if (prefix.find_first_not_of("abcdefghijklmnopqrstuvwxyz._0123456789") !=
       std::string::npos) {
-    LOG_ERROR(LOG_ROOT())
-        << "Config invalid name: " << prefix << " : " << node;
+    LOG_ERROR(LOG_ROOT()) << "Config invalid name: " << prefix << " : " << node;
     return;
   }
   output.push_back(std::make_pair(prefix, node));
@@ -30,7 +30,8 @@ listAllMember(const std::string &prefix, const YAML::Node &node,
     }
   }
 }
-void Config::loadFromYaml(const YAML::Node &root) {
+
+void Config::load_from_yaml(const YAML::Node &root) {
   std::list<std::pair<std::string, const YAML::Node>> all_nodes;
   listAllMember("", root, all_nodes);
 
@@ -40,7 +41,7 @@ void Config::loadFromYaml(const YAML::Node &root) {
       continue;
     }
     std::transform(key.begin(), key.end(), key.begin(), ::tolower);
-    ConfigVarBase::ptr var = lookupBase(key);
+    ConfigVarBase::ptr var = lookup_base(key);
 
     if (var) {
       if (i.second.IsScalar()) {
@@ -53,4 +54,13 @@ void Config::loadFromYaml(const YAML::Node &root) {
     }
   }
 }
+
+void Config::Visit(std::function<void(ConfigVarBase::ptr)> cb) {
+  RWMutexType::ReadLock lock(GetMutex());
+  configVarMap &m = GetDatas();
+  for (auto it = m.begin(); it != m.end(); ++it) {
+    cb(it->second);
+  }
+}
+
 } // namespace cool

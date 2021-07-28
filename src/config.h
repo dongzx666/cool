@@ -2,8 +2,8 @@
 #define __COOL_CONFIG_H
 
 #include "log.h"
+#include "thread.h"
 #include "util.h"
-#include "yaml.h"
 #include <algorithm>
 #include <boost/lexical_cast.hpp>
 #include <cstdint>
@@ -20,6 +20,7 @@
 #include <unordered_set>
 #include <utility>
 #include <vector>
+#include <yaml-cpp/yaml.h>
 
 namespace cool {
 class ConfigVarBase {
@@ -225,6 +226,7 @@ template <class T, class FromStr = LexicalCast<std::string, T>,
           class ToStr = LexicalCast<T, std::string>>
 class ConfigVar : public ConfigVarBase {
 public:
+  using RWMutexType = RWMutex;
   using ptr = std::shared_ptr<ConfigVar>;
   using on_change_cb =
       std::function<void(const T &old_value, const T &new_value)>;
@@ -234,6 +236,7 @@ public:
   std::string to_string() override {
     try {
       // return boost::lexical_cast<std::string>(m_val);
+      RWMutexType::ReadLock lock(m_mutex);
       return ToStr()(m_val);
     } catch (std::exception &e) {
       LOG_ERROR(LOG_ROOT())
@@ -247,33 +250,53 @@ public:
       // m_val = boost::lexical_cast<T>(val);
       value(FromStr()(val));
     } catch (std::exception &e) {
-      LOG_ERROR(LOG_ROOT())
-          << "ConfigVar::from string exception" << e.what()
-          << " convert: string to " << typeid(m_val).name();
+      LOG_ERROR(LOG_ROOT()) << "ConfigVar::from string exception" << e.what()
+                            << " convert: string to " << typeid(m_val).name();
     }
     return false;
   }
-  const T value() const { return m_val; }
+  const T value() {
+    RWMutexType::ReadLock lock(m_mutex);
+    return m_val;
+  }
   void value(const T &v) {
-    if (v == m_val) {
-      return;
+    {
+      RWMutexType::ReadLock lock(m_mutex);
+      if (v == m_val) {
+        return;
+      }
+      for (auto &i : m_cbs) {
+        i.second(m_val, v);
+      }
     }
-    for (auto &i : m_cbs) {
-      i.second(m_val, v);
-    }
+    RWMutexType::WriteLock lock(m_mutex);
     m_val = v;
   }
   std::string type() const override { return typeid(T).name(); }
 
-  void addListener(uint64_t key, on_change_cb cb) { m_cbs[key] = cb; }
-  void delListener(uint64_t key) { m_cbs.erase(key); }
+  uint64_t addListener(on_change_cb cb) {
+    static uint64_t s_fun_id = 0;
+    RWMutexType::WriteLock lock(m_mutex);
+    ++s_fun_id;
+    m_cbs[s_fun_id] = cb;
+    return s_fun_id;
+  }
+  void delListener(uint64_t key) {
+    RWMutexType::WriteLock lock(m_mutex);
+    m_cbs.erase(key);
+  }
   on_change_cb getListener(uint64_t key) {
+    RWMutexType::ReadLock lock(m_mutex);
     auto it = m_cbs.find(key);
     return it == m_cbs.end() ? nullptr : it->second;
   }
-  void clearListener() { m_cbs.clear(); }
+  void clearListener() {
+    RWMutexType::WriteLock lock(m_mutex);
+    m_cbs.clear();
+  }
 
 private:
+  RWMutexType m_mutex;
   T m_val;
   std::map<uint64_t, on_change_cb>
       m_cbs; // 回调变更查询map, uint64_t为key, 要求唯一
@@ -282,14 +305,16 @@ private:
 class Config {
 public:
   using configVarMap = std::unordered_map<std::string, ConfigVarBase::ptr>;
+  using RWMutexType = RWMutex;
 
   template <class T>
   static typename ConfigVar<T>::ptr lookup(const std::string &name,
                                            const T &default_val,
                                            const std::string &des = "") {
     // 处理重复赋值的情况
-    auto it = datas().find(name);
-    if (it != datas().end()) {
+    RWMutexType::WriteLock lock(GetMutex());
+    auto it = GetDatas().find(name);
+    if (it != GetDatas().end()) {
       auto tmp = std::dynamic_pointer_cast<ConfigVar<T>>(it->second);
       if (tmp) {
         LOG_INFO(LOG_ROOT()) << "Lookup name=" << name << " exist";
@@ -302,37 +327,45 @@ public:
         return nullptr;
       }
     }
-    auto temp = lookup<T>(name);
-    if (temp) {
-      LOG_INFO(LOG_ROOT()) << "Lookup name=" << name << " exist";
-      return temp;
-    }
+    // TODO: 啥时候去掉的下面的注释 <28-07-21, fengyu> //
+    // auto temp = lookup<T>(name);
+    // if (temp) {
+    //   LOG_INFO(LOG_ROOT()) << "Lookup name=" << name << " exist";
+    //   return temp;
+    // }
     if (name.find_first_not_of("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTU"
                                "VWXYZ._0123456789") != std::string::npos) {
       LOG_ERROR(LOG_ROOT()) << "Lookup name invalid" << name;
       throw std::invalid_argument(name);
     }
     typename ConfigVar<T>::ptr v(new ConfigVar<T>(name, default_val, des));
-    datas()[name] = v;
+    GetDatas()[name] = v;
     return v;
   }
 
   template <class T>
   static typename ConfigVar<T>::ptr lookup(const std::string &name) {
-    auto it = datas().find(name);
-    if (it == datas().end()) {
+    RWMutexType::ReadLock lock(GetMutex());
+    auto it = GetDatas().find(name);
+    if (it == GetDatas().end()) {
       return nullptr;
     }
     return std::dynamic_pointer_cast<ConfigVar<T>>(it->second);
   }
-  static void loadFromYaml(const YAML::Node &root);
-  static ConfigVarBase::ptr lookupBase(const std::string &name);
+  static void load_from_yaml(const YAML::Node &root);
+  static ConfigVarBase::ptr lookup_base(const std::string &name);
+
+  static void Visit(std::function<void(ConfigVarBase::ptr)> cb);
 
 private:
-  static configVarMap &datas() {
+  static configVarMap &GetDatas() {
     // 静态变量初始化顺序不一致导致的一些bug
     static configVarMap s_datas;
     return s_datas;
+  }
+  static RWMutexType& GetMutex() {
+    static RWMutexType s_mutex;
+    return s_mutex;
   }
 };
 
