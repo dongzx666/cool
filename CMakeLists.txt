@@ -18,6 +18,7 @@ set(LIB_SRC
   src/util.cpp
   src/config.cpp
   src/thread.cpp
+  src/fiber.cpp
   )
 
 add_library(src SHARED ${LIB_SRC})
@@ -44,6 +45,16 @@ add_executable(test_thread tests/test_thread.cpp)
 add_dependencies(test_thread src)
 target_link_libraries(test_thread ${LIBS})
 force_redefine_file_macro_for_sources(test_thread)
+
+add_executable(test_util tests/test_util.cpp)
+add_dependencies(test_util src)
+target_link_libraries(test_util ${LIBS})
+force_redefine_file_macro_for_sources(test_util)
+
+add_executable(test_fiber tests/test_fiber.cpp)
+add_dependencies(test_fiber src)
+target_link_libraries(test_fiber ${LIBS})
+force_redefine_file_macro_for_sources(test_fiber)
 
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)

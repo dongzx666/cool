@@ -1,8 +1,10 @@
-#ifndef COOL_COMMON_H
-#define COOL_COMMON_H
+#ifndef __COOL_COMMON_H
+#define __COOL_COMMON_H
 #include "log.h"
 #include "config.h"
 #include "util.h"
 #include "thread.h"
 #include "singleton.h"
-#endif /* ifndef COOL_COMMON_H */
+#include "macro.h"
+#include "fiber.h"
+#endif /* ifndef __COOL_COMMON_H */

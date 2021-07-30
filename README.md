@@ -18,9 +18,6 @@ Logger(日志器)
   |
 Appender(日志输出地)
 ```
-
-
-
 ## 配置系统
 
 Config --> Yaml
@@ -94,7 +91,32 @@ Pthread: pthread_create pthread_join pthread_detach
 
 
 ## 协程库封装
+
+定义协程接口: ucontext_t, macro
+
+```
+Fiber::GetThis()
+Thread -> main_fiber <----> sub_fiber
+            ^
+            |
+            |
+            v
+          sub_fiber
+```
+
+### 协程调度模块：
+
+```
+        N  -----------   M
+        1 --- N    1 --- M
+scheduler --> thread --> fiber
+
+1. 线程池， 分配一组线程
+2. 协程调度器， 将协程指定到相应的线程上去执行
+```
+
 ## socket函数库
 ## http协议开发
 ## 分布协议
 ## 推荐系统
+

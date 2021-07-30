@@ -2,8 +2,8 @@
 #define __COOL_LOG_H
 
 #include "singleton.h"
-#include "util.h"
 #include "thread.h"
+#include "util.h"
 #include <cctype>
 #include <cstdarg>
 #include <cstdint>
@@ -25,11 +25,12 @@
 #include <vector>
 
 // 普通封装，用法：LOG_ERROR(logger) << "test macro error";
-#define LOG_LEVEL(logger, level_)                                         \
+#define LOG_LEVEL(logger, level_)                                              \
   if (logger->level() <= level_)                                               \
-  cool::LogEventWrap(cool::LogEvent::ptr(new cool::LogEvent(                   \
-                         logger, level_, __FILE__, __LINE__, 0,                \
-                         cool::thread_id(), cool::fiber_id(), time(0))))       \
+  cool::LogEventWrap(                                                          \
+      cool::LogEvent::ptr(new cool::LogEvent(                                  \
+          logger, level_, __FILE__, __LINE__, 0, cool::thread_id(),            \
+          cool::Thread::GetName(), cool::fiber_id(), time(0))))                \
       .ss()
 #define LOG_DEBUG(logger) LOG_LEVEL(logger, cool::LogLevel::DEBUG)
 #define LOG_ERROR(logger) LOG_LEVEL(logger, cool::LogLevel::ERROR)
@@ -37,22 +38,23 @@
 #define LOG_WARN(logger) LOG_LEVEL(logger, cool::LogLevel::WARN)
 #define LOG_FATAL(logger) LOG_LEVEL(logger, cool::LogLevel::FATAL)
 // FMT封装，用法：LOG_FMT_ERROR(logger, "test macro fmt error %s", "sss");
-#define LOG_FMT_LEVEL(logger, level_, fmt, ...)                           \
+#define LOG_FMT_LEVEL(logger, level_, fmt, ...)                                \
   if (logger->level() <= level_)                                               \
-  cool::LogEventWrap(cool::LogEvent::ptr(new cool::LogEvent(                   \
-                         logger, level_, __FILE__, __LINE__, 0,                \
-                         cool::thread_id(), cool::fiber_id(), time(0))))       \
+  cool::LogEventWrap(                                                          \
+      cool::LogEvent::ptr(new cool::LogEvent(                                  \
+          logger, level_, __FILE__, __LINE__, 0, cool::thread_id(),            \
+          cool::Thread::GetName(), cool::fiber_id(), time(0))))                \
       .event()                                                                 \
       ->format(fmt, __VA_ARGS__)
-#define LOG_FMT_DEBUG(logger, fmt, ...)                                   \
+#define LOG_FMT_DEBUG(logger, fmt, ...)                                        \
   LOG_FMT_LEVEL(logger, cool::LogLevel::DEBUG, fmt, __VA_ARGS__)
-#define LOG_FMT_ERROR(logger, fmt, ...)                                   \
+#define LOG_FMT_ERROR(logger, fmt, ...)                                        \
   LOG_FMT_LEVEL(logger, cool::LogLevel::ERROR, fmt, __VA_ARGS__)
-#define LOG_FMT_INFO(logger, fmt, ...)                                    \
+#define LOG_FMT_INFO(logger, fmt, ...)                                         \
   LOG_FMT_LEVEL(logger, cool::LogLevel::INFO, fmt, __VA_ARGS__)
-#define LOG_FMT_WARN(logger, fmt, ...)                                    \
+#define LOG_FMT_WARN(logger, fmt, ...)                                         \
   LOG_FMT_LEVEL(logger, cool::LogLevel::WARN, fmt, __VA_ARGS__)
-#define LOG_FMT_FATAL(logger, fmt, ...)                                   \
+#define LOG_FMT_FATAL(logger, fmt, ...)                                        \
   LOG_FMT_LEVEL(logger, cool::LogLevel::FATAL, fmt, __VA_ARGS__)
 
 #define LOG_ROOT() cool::LoggerMgr::instance()->root()
@@ -81,14 +83,15 @@ public:
   using ptr = std::shared_ptr<LogEvent>;
   LogEvent(std::shared_ptr<Logger> logger, LogLevel::Level level,
            const char *file, int32_t line, uint32_t elapse, uint32_t thread_id,
-           uint32_t fiber_id, uint64_t time);
+           std::string thread_name, uint32_t fiber_id, uint64_t time);
   ~LogEvent();
 
   const char *file() const { return m_file; }
   int32_t line() const { return m_line; }
   uint32_t elapse() const { return m_elapse; }
-  uint32_t thread_id() const { return m_threadId; }
-  uint32_t fiber_id() const { return m_fiberId; }
+  uint32_t thread_id() const { return m_thread_id; }
+  const std::string &thread_name() const { return m_thread_name; }
+  uint32_t fiber_id() const { return m_fiber_id; }
   uint32_t time() const { return m_time; }
   std::string content() const { return m_ss.str(); }
   std::shared_ptr<Logger> logger() const { return m_logger; }
@@ -102,8 +105,9 @@ private:
   const char *m_file = nullptr; //文件名
   int32_t m_line = 0;           //行号
   uint32_t m_elapse = 0;        //运行时间
-  uint32_t m_threadId = 0;      //线程id
-  uint32_t m_fiberId = 0;       //携程id
+  uint32_t m_thread_id = 0;     //线程id
+  std::string m_thread_name;    //线程名称
+  uint32_t m_fiber_id = 0;      //携程id
   uint64_t m_time = 0;          //时间戳
   std::stringstream m_ss;
 
@@ -130,7 +134,7 @@ public:
   std::string format(std::shared_ptr<Logger> logger, LogLevel::Level level,
                      LogEvent::ptr event);
   bool error() const { return m_error; }
-  const std::string pattern() const {return m_pattern;}
+  const std::string pattern() const { return m_pattern; }
 
 public:
   class FormatItem {
@@ -150,7 +154,8 @@ private:
 };
 // 日志输出
 class LogAppender {
-friend class Logger;
+  friend class Logger;
+
 public:
   using ptr = std::shared_ptr<LogAppender>;
   using MutexType = SpinMutex;
@@ -251,4 +256,3 @@ using LoggerMgr = cool::Singleton<LoggerManager>;
 
 } // namespace cool
 #endif /* ifndef __COOL_LOG_H */
-
