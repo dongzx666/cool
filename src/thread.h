@@ -1,5 +1,5 @@
-#ifndef COOL_THREAD_H
-#define COOL_THREAD_H
+#ifndef __COOL_THREAD_H
+#define __COOL_THREAD_H
 
 #include <atomic>
 #include <functional>
@@ -200,4 +200,4 @@ private:
 };
 } // namespace cool
 
-#endif /* ifndef COOL_THREAD_H */
+#endif /* ifndef __COOL_THREAD_H */

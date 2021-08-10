@@ -18,9 +18,6 @@ Logger(日志器)
   |
 Appender(日志输出地)
 ```
-
-
-
 ## 配置系统
 
 Config --> Yaml
@@ -116,6 +113,7 @@ scheduler --> thread --> fiber
 
 1. 线程池， 分配一组线程
 2. 协程调度器， 将协程指定到相应的线程上去执行
+<<<<<<< HEAD
 
 m_threads
 m_fibers: std::function<void()>, fiber, thread_id
@@ -124,7 +122,9 @@ schedule: func / fiber
 ```
 
 
+
 ## socket函数库
 ## http协议开发
 ## 分布协议
 ## 推荐系统
+

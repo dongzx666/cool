@@ -96,6 +96,7 @@ private:
   std::string m_name;
   std::list<FiberAndThread> m_fibers;
   Fiber::ptr m_root_fiber;
+  std::list<> m_fibers;
 };
 
 } // namespace cool
