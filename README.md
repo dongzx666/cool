@@ -86,14 +86,44 @@ static Logger::ptr g_log = LOG_NAME("system");
 ## 线程库
 
 ### Thread:
-Pthread: pthread_create pthread_join pthread_detach
+`Pthread`: `pthread_create` `pthread_join` `pthread_detach`
 
 ### Mutex:
-互斥量：mutex（Mutex, ReadMutex, WriteMutex, SpinMutex(最终采用这个在日志中加锁), CASMutex）
-信号量：semaphore
+互斥量：`mutex`（Mutex, ReadMutex, WriteMutex, SpinMutex(最终采用这个在日志中加锁), CASMutex）
+信号量：`semaphore`
 
 
 ## 协程库封装
+
+定义协程接口: `ucontext_t`, `macro`
+
+```
+Fiber::GetThis()
+Thread -> main_fiber <----> sub_fiber
+            ^
+            |
+            |
+            v
+          sub_fiber
+```
+
+### 协程调度模块：
+
+```
+        N  -----------   M
+        1 --- N    1 --- M
+scheduler --> thread --> fiber
+
+1. 线程池， 分配一组线程
+2. 协程调度器， 将协程指定到相应的线程上去执行
+
+m_threads
+m_fibers: std::function<void()>, fiber, thread_id
+schedule: func / fiber
+
+```
+
+
 ## socket函数库
 ## http协议开发
 ## 分布协议
