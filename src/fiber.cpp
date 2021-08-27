@@ -2,6 +2,8 @@
 #include "config.h"
 #include "log.h"
 #include "macro.h"
+#include "scheduler.h"
+#include "src/util.h"
 #include <atomic>
 #include <cstdint>
 #include <cstdlib>
@@ -40,7 +42,7 @@ Fiber::Fiber() {
   LOG_DEBUG(g_logger) << "Fiber::Fiber id=0";
 }
 
-Fiber::Fiber(std::function<void()> cb, size_t stacksize)
+Fiber::Fiber(std::function<void()> cb, size_t stacksize, bool use_caller)
     : m_id(++s_fiber_id), m_cb(cb) {
   ++s_fiber_count;
   m_stacksize = stacksize ? stacksize : g_fiber_stack_size->value();
@@ -49,7 +51,11 @@ Fiber::Fiber(std::function<void()> cb, size_t stacksize)
   m_ctx.uc_link = nullptr;
   m_ctx.uc_stack.ss_sp = m_stack;
   m_ctx.uc_stack.ss_size = m_stacksize;
-  makecontext(&m_ctx, &Fiber::MainFunc, 0);
+  if (!use_caller) {
+    makecontext(&m_ctx, &Fiber::MainFunc, 0);
+  } else {
+    makecontext(&m_ctx, &Fiber::CallMainFunc, 0);
+  }
   LOG_DEBUG(g_logger) << "Fiber::Fiber id=" << m_id;
 }
 
@@ -83,15 +89,26 @@ void Fiber::reset(std::function<void()> cb) {
   m_state = State::INIT;
 }
 
+void Fiber::call () {
+  SetThis(this);
+  m_state = State::EXEC;
+  ASSERT2(swapcontext(&t_thread_fiber->m_ctx, &m_ctx) != -1, "swapcontext");
+}
+void Fiber::back () {
+  SetThis(t_thread_fiber.get());
+  ASSERT2(swapcontext(&m_ctx, &t_thread_fiber->m_ctx) != -1,
+            "swapcontext");
+}
 void Fiber::swapIn() {
   SetThis(this);
   ASSERT(m_state != State::EXEC);
   m_state = State::EXEC;
-  ASSERT2(swapcontext(&t_thread_fiber->m_ctx, &m_ctx) != -1, "swapcontext");
+  ASSERT2(swapcontext(&cool::Scheduler::GetMainFiber()->m_ctx, &m_ctx) != -1, "swapcontext");
 }
 void Fiber::swapOut() {
-  SetThis(t_thread_fiber.get());
-  ASSERT2(swapcontext(&m_ctx, &t_thread_fiber->m_ctx) != -1, "swapcontext");
+  SetThis(cool::Scheduler::GetMainFiber());
+  ASSERT2(swapcontext(&m_ctx, &cool::Scheduler::GetMainFiber()->m_ctx) != -1,
+          "swapcontext");
 }
 
 void Fiber::SetThis(Fiber *f) { t_fiber = f; }
@@ -125,15 +142,35 @@ void Fiber::MainFunc() {
     cur->m_state = State::TERM;
   } catch (std::exception &ex) {
     cur->m_state = State::ERROR;
-    LOG_ERROR(g_logger) << "Fiber Except: " << ex.what();
+    LOG_ERROR(g_logger) << "Fiber Except: " << ex.what() << std::endl << cool::backtrace_tostring();
   } catch (...) {
     cur->m_state = State::ERROR;
-    LOG_ERROR(g_logger) << "Fiber Except: ";
+    LOG_ERROR(g_logger) << "Fiber Except: " << std::endl << cool::backtrace_tostring();
   }
   // TODO: 不优雅 <29-07-21, fengyu> //
   auto raw_ptr = cur.get();
   cur.reset();
   raw_ptr->swapOut();
+  ASSERT2(false, "never reach here");
+}
+void Fiber::CallMainFunc() {
+  Fiber::ptr cur = GetThis();
+  ASSERT(cur);
+  try {
+    cur->m_cb();
+    cur->m_cb = nullptr;
+    cur->m_state = State::TERM;
+  } catch (std::exception &ex) {
+    cur->m_state = State::ERROR;
+    LOG_ERROR(g_logger) << "Fiber Except: " << ex.what() << std::endl << cool::backtrace_tostring();
+  } catch (...) {
+    cur->m_state = State::ERROR;
+    LOG_ERROR(g_logger) << "Fiber Except: " << std::endl << cool::backtrace_tostring();
+  }
+  // TODO: 不优雅 <29-07-21, fengyu> //
+  auto raw_ptr = cur.get();
+  cur.reset();
+  raw_ptr->back();
   ASSERT2(false, "never reach here");
 }
 uint64_t Fiber::GetFiberId() {

@@ -113,11 +113,19 @@ scheduler --> thread --> fiber
 
 1. 线程池， 分配一组线程
 2. 协程调度器， 将协程指定到相应的线程上去执行
-<<<<<<< HEAD
 
 m_threads
 m_fibers: std::function<void()>, fiber, thread_id
 schedule: func / fiber
+
+start()
+stop()
+run()
+1. 设置当前线程的scheduler
+2. 设置当前线程的run， fiber
+3. 协程调度循环while(true)
+  3.1 协程消息队列里是否有任务
+  3.2 无任务执行，执行idle
 
 ```
 

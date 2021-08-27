@@ -3,11 +3,14 @@
 
 #include "fiber.h"
 #include "thread.h"
+#include <atomic>
 #include <functional>
+#include <map>
 #include <memory>
 #include <string>
 #include <vector>
 #include <list>
+#include <atomic>
 
 namespace cool {
 class Scheduler {
@@ -30,7 +33,7 @@ public:
   template <class FiberOrCb> void schedule(FiberOrCb fc, int thread_id = -1) {
     bool need_tickle = false;
     {
-      MutexType::Lock lock(m_mutex);
+      MutexType::Lock lock{m_mutex};
       need_tickle = scheduleNoLock(fc, thread_id);
     }
     if (need_tickle) {
@@ -55,12 +58,13 @@ protected:
   virtual void tickle();
   void run();
   virtual bool stopping();
+  virtual void idle();
   void setThis();
 
   std::vector<int> m_thread_ids;
   size_t m_thread_count = 0;
-  size_t m_active_thread_count = 0;
-  size_t m_idle_thread_count = 0;
+  std::atomic<size_t> m_active_thread_count = {0};
+  std::atomic<size_t> m_idle_thread_count = {0};
   bool m_stop = true;
   bool m_autostop = false;
   int m_root_thread = 0;
@@ -96,7 +100,7 @@ private:
   std::string m_name;
   std::list<FiberAndThread> m_fibers;
   Fiber::ptr m_root_fiber;
-  std::list<> m_fibers;
+  std::map<int, std::list<FiberAndThread>> m_thrFibers;
 };
 
 } // namespace cool
