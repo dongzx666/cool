@@ -1,11 +1,12 @@
 #include "util.h"
-#include "log.h"
 #include "fiber.h"
+#include "log.h"
 #include <cstdlib>
 #include <execinfo.h>
 #include <ostream>
 #include <sstream>
 #include <string>
+#include <sys/time.h>
 #include <vector>
 
 namespace cool {
@@ -14,9 +15,7 @@ static Logger::ptr g_logger = LOG_NAME("system");
 
 pid_t thread_id() { return syscall(SYS_gettid); }
 
-uint32_t fiber_id() { 
-  return cool::Fiber::GetFiberId();
-}
+uint32_t fiber_id() { return cool::Fiber::GetFiberId(); }
 
 void backtrace(std::vector<std::string> &bt, int size, int skip) {
   void **array = (void **)malloc((sizeof(void *) * size));
@@ -34,7 +33,7 @@ void backtrace(std::vector<std::string> &bt, int size, int skip) {
   free(strings);
   free(array);
 }
-std::string backtrace_tostring(int size, int skip, const std::string& prefix) {
+std::string backtrace_tostring(int size, int skip, const std::string &prefix) {
   std::vector<std::string> bt;
   backtrace(bt, size, skip);
   std::stringstream ss;
@@ -42,5 +41,15 @@ std::string backtrace_tostring(int size, int skip, const std::string& prefix) {
     ss << prefix << bt[i] << std::endl;
   }
   return ss.str();
+}
+uint64_t GetCurrentMS() {
+  struct timeval tv;
+  gettimeofday(&tv, NULL);
+  return tv.tv_sec * 1000ul + tv.tv_usec / 1000;
+}
+uint64_t GetCurrentUS() {
+  struct timeval tv;
+  gettimeofday(&tv, NULL);
+  return tv.tv_sec * 1000 * 1000ul + tv.tv_usec;
 }
 } // namespace cool

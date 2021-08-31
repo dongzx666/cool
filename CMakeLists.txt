@@ -20,6 +20,8 @@ set(LIB_SRC
   src/thread.cpp
   src/fiber.cpp
   src/scheduler.cpp
+  src/iomanager.cpp
+  src/timer.cpp
   )
 
 add_library(src SHARED ${LIB_SRC})
@@ -61,6 +63,11 @@ add_executable(test_scheduler tests/test_scheduler.cpp)
 add_dependencies(test_scheduler src)
 target_link_libraries(test_scheduler ${LIBS})
 force_redefine_file_macro_for_sources(test_scheduler)
+
+add_executable(test_iomanager tests/test_iomanager.cpp)
+add_dependencies(test_iomanager src)
+target_link_libraries(test_iomanager ${LIBS})
+force_redefine_file_macro_for_sources(test_iomanager)
 
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)

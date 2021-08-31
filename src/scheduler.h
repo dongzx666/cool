@@ -46,7 +46,8 @@ public:
     {
       MutexType::Lock lock(m_mutex);
       while (begin != end) {
-        need_tickle = scheduleNoLock(&*begin) || need_tickle;
+        need_tickle = scheduleNoLock(&*begin, -1) || need_tickle;
+        ++begin;
       }
     }
     if (need_tickle) {
@@ -60,6 +61,8 @@ protected:
   virtual bool stopping();
   virtual void idle();
   void setThis();
+
+  bool hasIdleThreads() {return m_idle_thread_count > 0;};
 
   std::vector<int> m_thread_ids;
   size_t m_thread_count = 0;

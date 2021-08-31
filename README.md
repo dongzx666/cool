@@ -129,8 +129,44 @@ run()
 
 ```
 
+整合epoll
+```
+IOManager(epoll) ---> Scheduler
+    |
+    |
+    v
+  idle(epoll_wait)
 
+  信号量
+PutMessage(msg,) +信号量1,single()
+message_queue
+    |
+    |----Thread
+    |----Thread
+        wait()-信号量1，RecvMessage(msg,)
+异步IO，等待数据返回。epoll_wait
 
+epoll_create, epoll_ctl, epoll_wait
+```
+
+```
+Timer -> addTimer() -> cancel()
+获取当前的定时器触发离现在的时间差
+返回当前需要触发的定时器
+```
+
+IOManager继承了Scheduler和TimerManager
+```
+[Fiber]             [Timer]
+   ^                   ^
+   |                   |
+   |                   |
+[Thread]          [TimerManager]
+   ^                   ^
+   |                   |
+   |                   |
+[Scheduler] <---- [IOManager(epoll)]
+```
 ## socket函数库
 ## http协议开发
 ## 分布协议
