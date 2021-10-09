@@ -253,6 +253,3 @@ HttpServer : TcpServer
       v
     ServletDispatch
 ```
-## 分布协议
-
-## 推荐系统

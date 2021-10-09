@@ -74,7 +74,7 @@ public:
     INFO = 2,
     WARN = 3,
     ERROR = 4,
-    // FATAL = 5
+    FATAL = 5
   };
   static const char *to_string(LogLevel::Level level);
   static LogLevel::Level from_string(const std::string &str);
