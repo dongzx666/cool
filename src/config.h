@@ -22,6 +22,10 @@
 #include <vector>
 #include <yaml-cpp/yaml.h>
 
+#define cool_config(variable, name, value, des)           \
+  static cool::ConfigVar<decltype(value)>::ptr variable = \
+      cool::Config::lookup(name, value, des)
+
 namespace cool {
 class ConfigVarBase {
 public:

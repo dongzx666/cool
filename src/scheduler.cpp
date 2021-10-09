@@ -2,6 +2,7 @@
 #include "fiber.h"
 #include "log.h"
 #include "macro.h"
+#include "hook.h"
 #include "thread.h"
 #include "util.h"
 #include <cstddef>
@@ -114,8 +115,10 @@ void Scheduler::stop() {
   // }
 }
 void Scheduler::setThis() { t_scheduler = this; }
+
 void Scheduler::run() {
   LOG_DEBUG(g_logger) << "run";
+  set_hook_enable(true);
   setThis();
   if (cool::thread_id() != m_root_thread) {
     t_fiber = Fiber::GetThis().get();

@@ -9,9 +9,10 @@
 #include <stdint.h>
 #include <string>
 #include <thread>
+#include "noncopyable.h"
 
 namespace cool {
-class Semaphore {
+class Semaphore : Noncopyable{
 public:
   Semaphore(uint32_t count = 0);
   ~Semaphore();
@@ -20,10 +21,6 @@ public:
   void notify();
 
 private:
-  Semaphore(const Semaphore &) = delete;
-  Semaphore(const Semaphore &&) = delete;
-  Semaphore &operator=(const Semaphore &) = delete;
-
   sem_t m_semaphore;
 };
 
@@ -96,7 +93,7 @@ private:
   bool m_locked = false;
 };
 
-class Mutex {
+class Mutex : Noncopyable{
 public:
   using Lock = ScopedLockImpl<Mutex>;
   Mutex() { pthread_mutex_init(&m_mutex, nullptr); }
@@ -108,7 +105,7 @@ private:
   pthread_mutex_t m_mutex;
 };
 
-class NullMutex {
+class NullMutex : Noncopyable{
 public:
   using Lock = ScopedLockImpl<NullMutex>;
   NullMutex() {}
@@ -117,7 +114,7 @@ public:
   void unlock() {}
 };
 
-class RWMutex {
+class RWMutex : Noncopyable{
 public:
   using ReadLock = ReadScopedLockImpl<RWMutex>;
   using WriteLock = WriteScopedLockImpl<RWMutex>;
@@ -131,7 +128,7 @@ private:
   pthread_rwlock_t m_lock;
 };
 
-class NullRWMutex {
+class NullRWMutex : Noncopyable{
 public:
   using ReadLock = ReadScopedLockImpl<NullRWMutex>;
   using WriteLock = WriteScopedLockImpl<NullRWMutex>;
@@ -142,11 +139,11 @@ public:
   void unlock() {}
 };
 
-class SpinMutex {
+class SpinLock : Noncopyable {
 public:
-  using Lock = ScopedLockImpl<SpinMutex>;
-  SpinMutex() { pthread_spin_init(&m_mutex, 0); }
-  ~SpinMutex() { pthread_spin_destroy(&m_mutex); }
+  using Lock = ScopedLockImpl<SpinLock>;
+  SpinLock() { pthread_spin_init(&m_mutex, 0); }
+  ~SpinLock() { pthread_spin_destroy(&m_mutex); }
   void lock() { pthread_spin_lock(&m_mutex); }
   void unlock() { pthread_spin_unlock(&m_mutex); }
 
@@ -154,13 +151,13 @@ private:
   pthread_spinlock_t m_mutex;
 };
 
-class CASMutex {
+class CASLock : Noncopyable{
 public:
-  using Lock = ScopedLockImpl<CASMutex>;
-  CASMutex () {
+  using Lock = ScopedLockImpl<CASLock>;
+  CASLock () {
     m_mutex.clear();
   }
-  ~CASMutex () {}
+  ~CASLock () {}
   void lock () {
     while (std::atomic_flag_test_and_set_explicit(&m_mutex, std::memory_order_acquire));
   }

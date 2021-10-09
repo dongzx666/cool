@@ -60,6 +60,10 @@
 #define LOG_ROOT() cool::LoggerMgr::instance()->root()
 #define LOG_NAME(name) cool::LoggerMgr::instance()->logger(name);
 
+#define LOGGER_DEF(variable, name) \
+  static cool::Logger::ptr variable = LOG_NAME(name);
+
+
 namespace cool {
 // 日志级别
 class LogLevel {
@@ -70,7 +74,7 @@ public:
     INFO = 2,
     WARN = 3,
     ERROR = 4,
-    FATAL = 5
+    // FATAL = 5
   };
   static const char *to_string(LogLevel::Level level);
   static LogLevel::Level from_string(const std::string &str);
@@ -158,7 +162,7 @@ class LogAppender {
 
 public:
   using ptr = std::shared_ptr<LogAppender>;
-  using MutexType = SpinMutex;
+  using MutexType = SpinLock;
   virtual ~LogAppender() {}
   virtual std::string to_yaml_string() = 0;
 
@@ -181,7 +185,7 @@ class Logger : public std::enable_shared_from_this<Logger> {
 
 public:
   using ptr = std::shared_ptr<Logger>;
-  using MutexType = SpinMutex;
+  using MutexType = SpinLock;
   Logger(const std::string &name = "root");
 
   void log(LogLevel::Level level, LogEvent::ptr event);
@@ -238,7 +242,7 @@ private:
 
 class LoggerManager {
 public:
-  using MutexType = SpinMutex;
+  using MutexType = SpinLock;
   LoggerManager();
   Logger::ptr logger(const std::string &name);
   void addLogger(std::string name, Logger::ptr logger);

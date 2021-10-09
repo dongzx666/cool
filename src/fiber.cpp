@@ -132,7 +132,9 @@ void Fiber::YieldToHold() {
   cur->m_state = State::HOLD;
   cur->swapOut();
 }
+
 uint64_t Fiber::TotalFibers() { return s_fiber_count; }
+
 void Fiber::MainFunc() {
   Fiber::ptr cur = GetThis();
   ASSERT(cur);

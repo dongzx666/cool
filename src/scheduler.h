@@ -5,12 +5,11 @@
 #include "thread.h"
 #include <atomic>
 #include <functional>
+#include <list>
 #include <map>
 #include <memory>
 #include <string>
 #include <vector>
-#include <list>
-#include <atomic>
 
 namespace cool {
 class Scheduler {
@@ -30,7 +29,8 @@ public:
   static Scheduler *GetThis();
   static Fiber *GetMainFiber();
 
-  template <class FiberOrCb> void schedule(FiberOrCb fc, int thread_id = -1) {
+  template <class FiberOrCb>
+  void schedule(FiberOrCb fc, int thread_id = -1) {
     bool need_tickle = false;
     {
       MutexType::Lock lock{m_mutex};
@@ -62,7 +62,7 @@ protected:
   virtual void idle();
   void setThis();
 
-  bool hasIdleThreads() {return m_idle_thread_count > 0;};
+  bool hasIdleThreads() { return m_idle_thread_count > 0; };
 
   std::vector<int> m_thread_ids;
   size_t m_thread_count = 0;
@@ -73,7 +73,8 @@ protected:
   int m_root_thread = 0;
 
 private:
-  template <class FiberOrCb> bool scheduleNoLock(FiberOrCb fc, int thread_id) {
+  template <class FiberOrCb>
+  bool scheduleNoLock(FiberOrCb fc, int thread_id) {
     bool need_tickle = m_fibers.empty();
     FiberAndThread ft(fc, thread_id);
     if (ft.fiber || ft.cb) {
