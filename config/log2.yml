@@ -1,16 +1,23 @@
 logs:
   - name: root
     level: debug
-    formatter: '%d%T%m%n'
     appenders:
       - type: FileLogAppender
         file: root.txt
       - type: StdoutLogAppender
   - name: system
     level: info
-    formatter: '%d%T%m%n'
     appenders:
       - type: FileLogAppender
-        formatter: "%d%T[%p]%T%m%n"
+        formatter: "%d{%Y-%m-%d %H:%M:%S} %t(%N):%F [%p] [%c] %f:%l %m %n"
         file: system.txt
       - type: StdoutLogAppender
+fiber:
+  stack_size: 1048576 # 1024 * 1024
+tcp:
+  connect:
+    timeout: 5000
+http:
+  request:
+    buffer_size: 4096
+    max_body_size: 67108864 # 64 * 1024 * 1024

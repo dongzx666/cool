@@ -17,7 +17,7 @@ cool_config(g_tcp_server_read_timeout, "tcp_server.read_timeout",
             (uint64_t)60 * 1000 * 2, "tcp server read timeout");
 
 TcpServer::TcpServer(cool::IOManager *worker, cool::IOManager *accept_worker)
-    : m_recv_timeout(g_tcp_server_read_timeout->value()), m_name("cool v1.0.0"), m_worker(worker),
+    : m_recv_timeout(g_tcp_server_read_timeout->get_value()), m_name("cool v1.0.0"), m_worker(worker),
       m_accept_worker(accept_worker), m_is_stop(false), m_is_start(false) {}
 
 bool TcpServer::bind(cool::Address::ptr addr) {

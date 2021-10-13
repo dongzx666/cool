@@ -45,7 +45,7 @@ Fiber::Fiber() {
 Fiber::Fiber(std::function<void()> cb, size_t stacksize, bool use_caller)
     : m_id(++s_fiber_id), m_cb(cb) {
   ++s_fiber_count;
-  m_stacksize = stacksize ? stacksize : g_fiber_stack_size->value();
+  m_stacksize = stacksize ? stacksize : g_fiber_stack_size->get_value();
   m_stack = StackAllocator::Alloc(m_stacksize);
   ASSERT2(getcontext(&m_ctx) == 0, "getcontext");
   m_ctx.uc_link = nullptr;

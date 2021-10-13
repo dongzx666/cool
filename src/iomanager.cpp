@@ -98,7 +98,7 @@ int IOManager::addEvent(int fd, Event event, std::function<void()> cb) {
     fd_ctx = m_fdContexts[fd];
   }
 
-  FdContext::MutexType::Lock lock3{fd_ctx->mutex};
+  FdContext::MutexType::Lock lock2{fd_ctx->mutex};
   if ((fd_ctx->events & event)) {
     LOG_ERROR(g_logger) << "addEvent assert fd = " << fd;
     // << ",event = " << event << ",fd_ctx.event= " << fd_ctx->events;
@@ -118,7 +118,10 @@ int IOManager::addEvent(int fd, Event event, std::function<void()> cb) {
   ++m_pendingEventCount;
   fd_ctx->events = (Event)(fd_ctx->events | event);
   FdContext::EventContext &event_ctx = fd_ctx->getContext(event);
-  ASSERT(!event_ctx.scheduler && !event_ctx.fiber && !event_ctx.cb);
+  // LOG_DEBUG(g_logger) << "event =" << event;
+  // LOG_DEBUG(g_logger) << "event_ctx fiber " << event_ctx.fiber;
+  // TODO(fengyu): assert has problem [11-10-21] //
+  // ASSERT(!event_ctx.scheduler && !event_ctx.fiber && !event_ctx.cb);
 
   event_ctx.scheduler = Scheduler::GetThis();
   if (cb) {

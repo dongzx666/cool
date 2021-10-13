@@ -5,11 +5,20 @@
 ### 结构
 ```
 Logger： 日志器，负责输出日志
-  LogForMatter: 日志器的输出格式
-  LogAppender： 日志器的输出目的地
-  LogEvent: 日志器的输出内容
-  LogEventWrap: 将LogEvent与Logger捆绑
+LogForMatter: 日志器的输出格式
+LogAppender： 日志器的输出目的地
+LogEvent: 日志器的输出内容
+LogEventWrap: 将LogEvent与Logger捆绑
 LogManager: 日志管理，单例模式，统一管理所有的日志器
+```
+### 学习
+
+```
+LogManager -> Logger -> LogAppender -> LogForMatter -> LogEvent(LogEventWrap)
+                ^                                          |
+                |                                          |
+                --------------------------------------------
+LogEventWrap是LogEvent的包裹函数，为宏定义服务，使得支持流式操作。
 ```
 
 ### 改进

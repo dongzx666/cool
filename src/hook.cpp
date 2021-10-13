@@ -15,7 +15,7 @@
 // #include <sys/socket.h>
 #include <utility>
 
-cool::Logger::ptr g_logger = LOG_NAME("system");
+static cool::Logger::ptr g_logger = LOG_NAME("system");
 static cool::ConfigVar<int>::ptr g_tcp_connect_timeout =
     cool::Config::lookup("tcp.connect.timeout", 5000, "tcp connect timeout");
 
@@ -60,8 +60,8 @@ static uint64_t s_connect_timeout = -1;
 struct _HookIniter {
   _HookIniter() {
     hook_init();
-    s_connect_timeout = g_tcp_connect_timeout->value();
-    g_tcp_connect_timeout->addListener(
+    s_connect_timeout = g_tcp_connect_timeout->get_value();
+    g_tcp_connect_timeout->add_listener(
         [](const int &old_val, const int &new_val) {
           LOG_DEBUG(g_logger) << "tcp connect timeout changed from " << old_val
                               << " to " << new_val;

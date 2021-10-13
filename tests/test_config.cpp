@@ -69,26 +69,26 @@ void test_yaml() {
 }
 
 void test_config() {
-  LOG_INFO(LOG_ROOT()) << "before " << g_int_value_config->value();
+  LOG_INFO(LOG_ROOT()) << "before " << g_int_value_config->get_value();
   LOG_INFO(LOG_ROOT()) << "before " << g_double_value_config->to_string();
-#define XX(g_var, name, prefix)                                                \
-  {                                                                            \
-    auto v = g_var->value();                                                   \
-    for (auto &i : v) {                                                        \
-      LOG_INFO(LOG_ROOT()) << #prefix " " #name ": " << i;                     \
-    }                                                                          \
-    LOG_INFO(LOG_ROOT()) << #prefix " " #name " yaml:\n"                       \
-                         << g_var->to_string();                                \
+#define XX(g_var, name, prefix)                            \
+  {                                                        \
+    auto v = g_var->get_value();                           \
+    for (auto &i : v) {                                    \
+      LOG_INFO(LOG_ROOT()) << #prefix " " #name ": " << i; \
+    }                                                      \
+    LOG_INFO(LOG_ROOT()) << #prefix " " #name " yaml:\n"   \
+                         << g_var->to_string();            \
   }
-#define XX_M(g_var, name, prefix)                                              \
-  {                                                                            \
-    auto v = g_var->value();                                                   \
-    for (auto &i : v) {                                                        \
-      LOG_INFO(LOG_ROOT()) << #prefix " " #name ": {" << i.first << " : "      \
-                           << i.second << "}";                                 \
-    }                                                                          \
-    LOG_INFO(LOG_ROOT()) << #prefix " " #name " yaml:\n"                       \
-                         << g_var->to_string();                                \
+#define XX_M(g_var, name, prefix)                                         \
+  {                                                                       \
+    auto v = g_var->get_value();                                          \
+    for (auto &i : v) {                                                   \
+      LOG_INFO(LOG_ROOT()) << #prefix " " #name ": {" << i.first << " : " \
+                           << i.second << "}";                            \
+    }                                                                     \
+    LOG_INFO(LOG_ROOT()) << #prefix " " #name " yaml:\n"                  \
+                         << g_var->to_string();                           \
   }
   XX(g_int_vector_value_config, int_vec, before);
   XX(g_int_list_value_config, int_list, before);
@@ -100,7 +100,7 @@ void test_config() {
   YAML::Node root = YAML::LoadFile("../config/log.yml");
   cool::Config::load_from_yaml(root);
 
-  LOG_INFO(LOG_ROOT()) << "after " << g_int_value_config->value();
+  LOG_INFO(LOG_ROOT()) << "after " << g_int_value_config->get_value();
   LOG_INFO(LOG_ROOT()) << "after " << g_double_value_config->to_string();
   XX(g_int_vector_value_config, int_vec, after);
   XX(g_int_list_value_config, int_list, after);
@@ -127,8 +127,10 @@ public:
     return m_name == oth.m_name && m_age == oth.m_age && m_sex == oth.m_sex;
   }
 };
+
 namespace cool {
-template <> class LexicalCast<std::string, Person> {
+template <>
+class LexicalCast<std::string, Person> {
 public:
   Person operator()(const std::string &v) {
     YAML::Node node = YAML::Load(v);
@@ -139,7 +141,8 @@ public:
     return p;
   }
 };
-template <> class LexicalCast<Person, std::string> {
+template <>
+class LexicalCast<Person, std::string> {
 public:
   std::string operator()(const Person &p) {
     YAML::Node node;
@@ -156,38 +159,39 @@ cool::ConfigVar<Person>::ptr g_person =
     cool::Config::lookup("class.person", Person(), "system person");
 
 void test_class() {
-  g_person->addListener([](const Person &old_value, const Person &new_value) {
+  g_person->add_listener([](const Person &old_value, const Person &new_value) {
     LOG_INFO(LOG_ROOT()) << "[addListener]old_value=" << old_value.to_string()
                          << "new_value=" << new_value.to_string();
   });
-  LOG_INFO(LOG_ROOT()) << "before" << g_person->value().to_string() << std::endl
+  LOG_INFO(LOG_ROOT()) << "before" << g_person->get_value().to_string()
+                       << std::endl
                        << g_person->to_string();
 
   YAML::Node root = YAML::LoadFile("../config/log.yml");
   cool::Config::load_from_yaml(root);
 
-  LOG_INFO(LOG_ROOT()) << "after" << g_person->value().to_string() << std::endl
+  LOG_INFO(LOG_ROOT()) << "after" << g_person->get_value().to_string()
+                       << std::endl
                        << g_person->to_string();
 }
 
 void test_log() {
   static cool::Logger::ptr sys_log = LOG_NAME("system");
   LOG_INFO(sys_log) << "hello system" << std::endl;
-  std::cout << cool::LoggerMgr::instance()->to_yaml_string() << std::endl;
   YAML::Node root = YAML::LoadFile("../config/log.yml");
   // std::cout << root << std::endl;
   cool::Config::load_from_yaml(root);
   std::cout << "===========================" << std::endl;
-  std::cout << cool::LoggerMgr::instance()->to_yaml_string() << std::endl;
   LOG_INFO(sys_log) << "hello system" << std::endl;
-  sys_log->formatter("%d - %m%n");
+  sys_log->set_formatter("%d - %m%n");
   LOG_INFO(sys_log) << "hello system" << std::endl;
 }
 void test_visit() {
   cool::Config::Visit([](cool::ConfigVarBase::ptr var) {
-    LOG_INFO(LOG_ROOT()) << "name=" << var->name() << ",des=" << var->des()
-                       << ",typename=" << var->type()
-                       << ",value=" << var->to_string();
+    LOG_INFO(LOG_ROOT()) << "name=" << var->get_name()
+                         << ",des=" << var->get_des()
+                         << ",typename=" << var->get_type()
+                         << ",value=" << var->to_string();
   });
 }
 int main() {
@@ -200,8 +204,8 @@ int main() {
 
   // test_class();
 
-  // test_log();
+  test_log();
 
-  test_visit();
+  // test_visit();
   return 0;
 }

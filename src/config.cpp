@@ -13,6 +13,7 @@ ConfigVarBase::ptr Config::lookup_base(const std::string &name) {
   return it == GetDatas().end() ? nullptr : it->second;
 }
 
+// TODO(fengyu): 需要进一步解读 [11-10-21] //
 static void
 listAllMember(const std::string &prefix, const YAML::Node &node,
               std::list<std::pair<std::string, const YAML::Node>> &output) {

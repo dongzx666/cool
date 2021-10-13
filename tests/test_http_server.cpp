@@ -29,9 +29,9 @@ void run() {
 
 int main(int argc, char *argv[]) {
   // static cool::Logger::ptr g_logger = LOG_NAME("system");
-  // YAML::Node root = YAML::LoadFile("../config/log2.yml");
-  // cool::Config::load_from_yaml(root);
-  cool::IOManager iom(2);
+  YAML::Node root = YAML::LoadFile("../config/log2.yml");
+  cool::Config::load_from_yaml(root);
+  cool::IOManager iom(2, true, "server");
   iom.schedule(run);
   return 0;
 }

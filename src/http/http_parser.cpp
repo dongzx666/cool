@@ -34,13 +34,13 @@ uint64_t HttpRequestParser::GetHttpRequestMaxBodySize() {
 namespace {
 struct _RequestSizeIniter {
   _RequestSizeIniter() {
-    s_http_request_buffer_size = g_http_request_buffer_size->value();
-    g_http_request_buffer_size->addListener(
+    s_http_request_buffer_size = g_http_request_buffer_size->get_value();
+    g_http_request_buffer_size->add_listener(
         [](const uint64_t &ov, const uint64_t &nv) {
           s_http_request_buffer_size = nv;
         });
-    s_http_request_max_body_size = g_http_request_max_body_size->value();
-    g_http_request_max_body_size->addListener(
+    s_http_request_max_body_size = g_http_request_max_body_size->get_value();
+    g_http_request_max_body_size->add_listener(
         [](const uint64_t &ov, const uint64_t &nv) {
           s_http_request_max_body_size = nv;
         });
